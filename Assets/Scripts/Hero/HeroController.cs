@@ -9,6 +9,7 @@ public class HeroController : MonoBehaviour
     private Rigidbody2D rb;
     private Animator anim;
     private Animator animGround;
+    private SpriteRenderer sr;
     [Header("For change heros")]
     [SerializeField]private int _currentHeroId ;
     private GameObject _currentHero;
@@ -16,47 +17,56 @@ public class HeroController : MonoBehaviour
     [Header("For Movement")]
     public float Speed;
     public float _kofSpeed;
-    [SerializeField] private bool FaceIsRight=true;
-    [SerializeField] private float move;
-    public int Counter;
+    private bool FaceIsRight=true;
+    private float move;
     [Header("For Jump")]
-    [SerializeField] private bool IsGrounded;
-    [SerializeField] private float GroundCheckRadius;
-    public float JumpForce;
-    [SerializeField] private Transform GroundCheck;
+    private bool IsGrounded;
+    [SerializeField] private float groundCheckRadius;
+    public float jumpForce;
+    [SerializeField] private Transform groundCheck;
     [SerializeField] private LayerMask Ground;
-    public bool DestroyMode = false;
+    private bool DestroyMode = false;
+
 
     // Start is called before the first frame update
     void Start()
     {
-        rb = GetComponent<Rigidbody2D>();
-        _currentHeroId = 1;
-        animGround = GetComponentInChildren<Animator>();
         _kofSpeed = 1;
+        _currentHeroId = 1;
+
+        rb = GetComponent<Rigidbody2D>();
+        animGround = GetComponentInChildren<Animator>();
+        sr = spritesOfcharacters[_currentHeroId].GetComponent<SpriteRenderer>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown("e"))
-            ChangeCharacter();
-        if (Input.GetKeyDown("space"))
-            CurrentHeroSkill();
-        if (Input.GetKeyUp("space"))
-        {
-            DestroyMode = false;
-            _kofSpeed = 1;
-        }
+        CheckButtonsDown();
     }
 
     private void FixedUpdate()
     {
         Movement();
         NeedFlip();
-        IsGrounded = Physics2D.OverlapCircle(GroundCheck.position, GroundCheckRadius, Ground);
+        GroundCheck();
+    }
+    void CheckButtonsDown()
+    {
+        if (Input.GetKeyDown("e"))
+            ChangeCharacter();
+        if (Input.GetKeyDown("space"))
+            CastHeroSkill();
+        if (Input.GetKeyUp("space"))
+        {
+            DestroyMode = false;
+            _kofSpeed = 1;
+        }
+    }
+    void GroundCheck()
+    {
+        IsGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, Ground);
         animGround.SetBool("IsGrounded", IsGrounded);
-            
     }
     private void Movement()
     {
@@ -78,12 +88,10 @@ public class HeroController : MonoBehaviour
     } 
     private void Flip()
     {
-            FaceIsRight = !FaceIsRight;
-            Vector2 scale = spritesOfcharacters[_currentHeroId].transform.localScale;
-            scale.x *= -1;
-            spritesOfcharacters[_currentHeroId].transform.localScale = scale;
+        FaceIsRight = !FaceIsRight;
+        sr.flipX = !sr.flipX;
     }
-    void CurrentHeroSkill()
+    void CastHeroSkill()
     {
         switch (_currentHeroId)
         {
@@ -108,18 +116,21 @@ public class HeroController : MonoBehaviour
         _currentHero.SetActive(false);
         if (!FaceIsRight)
             Flip();
+
         if (_currentHeroId != spritesOfcharacters.Count - 1)
             _currentHeroId += 1;
         else
             _currentHeroId = 0;
+
         _currentHero = spritesOfcharacters[_currentHeroId];
         _currentHero.SetActive(true);
         FaceIsRight = true;
+        sr = _currentHero.GetComponent<SpriteRenderer>();
     }
    public void Jump()
     {
         if (IsGrounded)
-            rb.AddForce(Vector2.up * JumpForce, ForceMode2D.Impulse);
+            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
 
     }
     private void BeardmanSkill()
@@ -131,9 +142,13 @@ public class HeroController : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("CanBeDestroyed") && DestroyMode)
         {
-            DestroyObjects ds = collision.gameObject.GetComponent<DestroyObjects>();
-            ds.DestroyObject();  
+            DestroyTraps(collision);
         }
+    }
+    void DestroyTraps(Collision2D collision)
+    {
+        DestroyObjects ds = collision.gameObject.GetComponent<DestroyObjects>();
+        ds.DestroyObject();
     }
 }
 
